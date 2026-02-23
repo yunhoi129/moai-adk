@@ -429,3 +429,112 @@ func countCallsContaining(calls [][]string, target string) int {
 	}
 	return count
 }
+
+// --- Tests for teammate prefix (issue #416) ---
+
+func TestSessionManager_Create_TeammateSession_PrefixAdded(t *testing.T) {
+	t.Parallel()
+
+	var calls [][]string
+	runner := func(_ context.Context, name string, args ...string) (string, error) {
+		calls = append(calls, append([]string{name}, args...))
+		return "", nil
+	}
+
+	mgr := NewSessionManager(WithSessionRunFunc(runner))
+	cfg := &SessionConfig{
+		Name:     "teammate-1",
+		Teammate: true,
+		Panes: []PaneConfig{
+			{SpecID: "SPEC-1", Command: "cmd1"},
+		},
+		MaxVisible: 3,
+	}
+
+	result, err := mgr.Create(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedSessionName := "moai-team-teammate-1"
+	if result.SessionName != expectedSessionName {
+		t.Errorf("SessionName = %q, want %q", result.SessionName, expectedSessionName)
+	}
+
+	// Verify that tmux new-session was called with the prefixed name.
+	newSessionCall := findCall(calls, "new-session")
+	if newSessionCall == nil {
+		t.Fatal("no new-session call found")
+	}
+
+	sessionNameArg := getSessionNameArg(newSessionCall)
+	if sessionNameArg != expectedSessionName {
+		t.Errorf("new-session -s arg = %q, want %q", sessionNameArg, expectedSessionName)
+	}
+}
+
+func TestSessionManager_Create_NonTeammateSession_NoPrefix(t *testing.T) {
+	t.Parallel()
+
+	var calls [][]string
+	runner := func(_ context.Context, name string, args ...string) (string, error) {
+		calls = append(calls, append([]string{name}, args...))
+		return "", nil
+	}
+
+	mgr := NewSessionManager(WithSessionRunFunc(runner))
+	cfg := &SessionConfig{
+		Name:     "user-session",
+		Teammate: false,
+		Panes: []PaneConfig{
+			{SpecID: "SPEC-1", Command: "cmd1"},
+		},
+		MaxVisible: 3,
+	}
+
+	result, err := mgr.Create(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expectedSessionName := "user-session"
+	if result.SessionName != expectedSessionName {
+		t.Errorf("SessionName = %q, want %q", result.SessionName, expectedSessionName)
+	}
+
+	// Verify that tmux new-session was called without prefix.
+	newSessionCall := findCall(calls, "new-session")
+	if newSessionCall == nil {
+		t.Fatal("no new-session call found")
+	}
+
+	sessionNameArg := getSessionNameArg(newSessionCall)
+	if sessionNameArg != expectedSessionName {
+		t.Errorf("new-session -s arg = %q, want %q", sessionNameArg, expectedSessionName)
+	}
+}
+
+// --- Test helpers for prefix tests ---
+
+func findCall(calls [][]string, command string) []string {
+	for _, call := range calls {
+		// Check if any element in the call matches the command
+		for _, arg := range call {
+			if arg == command {
+				return call
+			}
+		}
+	}
+	return nil
+}
+
+func getSessionNameArg(call []string) string {
+	// tmux new-session -d -s <session-name>
+	// Find the -s flag and return the next argument.
+	for i, arg := range call {
+		if arg == "-s" && i+1 < len(call) {
+			return call[i+1]
+		}
+	}
+	return ""
+}

@@ -194,8 +194,10 @@ func getCurrentTmuxSession(ctx context.Context) string {
 	return strings.TrimSpace(string(out))
 }
 
-// cleanupOrphanedTmuxSessions kills tmux sessions that are not currently
-// attached. The cleanup is capped at 4 seconds to stay within the SessionEnd
+// cleanupOrphanedTmuxSessions kills tmux sessions that were created for
+// teammates (sessions with "moai-team-" prefix) and are not currently
+// attached. This prevents accidentally killing user-created tmux sessions.
+// The cleanup is capped at 4 seconds to stay within the SessionEnd
 // hook timeout budget. If tmux is not installed or no sessions exist, the
 // function returns silently.
 func cleanupOrphanedTmuxSessions(ctx context.Context) {
@@ -219,11 +221,19 @@ func cleanupOrphanedTmuxSessions(ctx context.Context) {
 		if line == "" {
 			continue
 		}
-		// Skip the current tmux session - never kill the user's actual session.
+		// Extract session name from "session-name: windows (created ...) (attached)"
 		name, _, found := strings.Cut(line, ":")
 		if !found || name == "" {
 			continue
 		}
+
+		// Only cleanup sessions with the teammate prefix.
+		// This prevents killing user-created tmux sessions.
+		if !strings.HasPrefix(name, "moai-team-") {
+			continue
+		}
+
+		// Skip the current tmux session - never kill the user's actual session.
 		if name == currentSession {
 			continue
 		}

@@ -8,6 +8,11 @@ import (
 
 const defaultMaxVisible = 3
 
+// teammateSessionPrefix is the prefix for teammate tmux sessions.
+// Sessions with this prefix are created by Claude Code Agent Teams
+// and are cleaned up by SessionEnd hooks.
+const teammateSessionPrefix = "moai-team-"
+
 // PaneConfig describes a single tmux pane.
 type PaneConfig struct {
 	// SpecID identifies the SPEC this pane is for (e.g., "SPEC-ISSUE-123").
@@ -21,6 +26,10 @@ type PaneConfig struct {
 type SessionConfig struct {
 	// Name is the session name (e.g., "github-issues-2026-02-16-18-30").
 	Name string
+
+	// Teammate indicates whether this is a teammate session.
+	// If true, the session name will be prefixed with "moai-team-".
+	Teammate bool
 
 	// Panes lists the panes to create in the session.
 	Panes []PaneConfig
@@ -93,6 +102,9 @@ func NewSessionManager(opts ...SessionManagerOption) *DefaultSessionManager {
 //   - Panes 2 to MaxVisible: added via vertical splits (split-window -v).
 //   - Panes beyond MaxVisible: added via horizontal splits (split-window -h).
 //   - After all panes are created, focus returns to pane 0.
+//
+// If cfg.Teammate is true, the session name is prefixed with "moai-team-"
+// to distinguish teammate sessions from user-created sessions.
 func (m *DefaultSessionManager) Create(ctx context.Context, cfg *SessionConfig) (*SessionResult, error) {
 	if len(cfg.Panes) == 0 {
 		return nil, ErrNoPanes
@@ -103,17 +115,23 @@ func (m *DefaultSessionManager) Create(ctx context.Context, cfg *SessionConfig) 
 		maxVisible = defaultMaxVisible
 	}
 
-	// Step 1: Create the session with the first pane.
-	if _, err := m.run(ctx, "tmux", "new-session", "-d", "-s", cfg.Name); err != nil {
-		return nil, fmt.Errorf("create session %q: %w", cfg.Name, err)
+	// Apply prefix for teammate sessions to distinguish them from user sessions.
+	sessionName := cfg.Name
+	if cfg.Teammate {
+		sessionName = teammateSessionPrefix + sessionName
 	}
 
-	m.logger.Debug("tmux session created", "name", cfg.Name)
+	// Step 1: Create the session with the first pane.
+	if _, err := m.run(ctx, "tmux", "new-session", "-d", "-s", sessionName); err != nil {
+		return nil, fmt.Errorf("create session %q: %w", sessionName, err)
+	}
+
+	m.logger.Debug("tmux session created", "name", sessionName)
 
 	// Step 2: Send command to the first pane.
-	if err := m.sendKeys(ctx, cfg.Name, 0, cfg.Panes[0].Command); err != nil {
+	if err := m.sendKeys(ctx, sessionName, 0, cfg.Panes[0].Command); err != nil {
 		m.logger.Warn("failed to send command to first pane",
-			"session", cfg.Name,
+			"session", sessionName,
 			"error", err,
 		)
 	}
@@ -125,18 +143,18 @@ func (m *DefaultSessionManager) Create(ctx context.Context, cfg *SessionConfig) 
 			direction = "-h" // Horizontal split for overflow.
 		}
 
-		if _, err := m.run(ctx, "tmux", "split-window", direction, "-t", cfg.Name); err != nil {
+		if _, err := m.run(ctx, "tmux", "split-window", direction, "-t", sessionName); err != nil {
 			m.logger.Warn("failed to create pane",
-				"session", cfg.Name,
+				"session", sessionName,
 				"pane_index", i,
 				"error", err,
 			)
 			continue
 		}
 
-		if err := m.sendKeys(ctx, cfg.Name, i, cfg.Panes[i].Command); err != nil {
+		if err := m.sendKeys(ctx, sessionName, i, cfg.Panes[i].Command); err != nil {
 			m.logger.Warn("failed to send command to pane",
-				"session", cfg.Name,
+				"session", sessionName,
 				"pane_index", i,
 				"error", err,
 			)
@@ -144,16 +162,16 @@ func (m *DefaultSessionManager) Create(ctx context.Context, cfg *SessionConfig) 
 	}
 
 	// Step 4: Select the first pane and rebalance layout.
-	_, _ = m.run(ctx, "tmux", "select-pane", "-t", fmt.Sprintf("%s:0.0", cfg.Name))
-	_, _ = m.run(ctx, "tmux", "select-layout", "-t", cfg.Name, "tiled")
+	_, _ = m.run(ctx, "tmux", "select-pane", "-t", fmt.Sprintf("%s:0.0", sessionName))
+	_, _ = m.run(ctx, "tmux", "select-layout", "-t", sessionName, "tiled")
 
 	m.logger.Info("tmux session ready",
-		"name", cfg.Name,
+		"name", sessionName,
 		"panes", len(cfg.Panes),
 	)
 
 	return &SessionResult{
-		SessionName: cfg.Name,
+		SessionName: sessionName,
 		PaneCount:   len(cfg.Panes),
 		Attached:    false,
 	}, nil
