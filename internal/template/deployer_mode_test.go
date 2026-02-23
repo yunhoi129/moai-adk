@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"testing/fstest"
 
@@ -250,14 +251,16 @@ func TestModeAwareDeployer_Deploy(t *testing.T) {
 			t.Fatalf("Deploy error: %v", err)
 		}
 
-		// Check shell script has executable permission
-		shInfo, err := os.Stat(filepath.Join(root, "hooks", "run.sh"))
-		if err != nil {
-			t.Fatalf("Stat shell script: %v", err)
-		}
-		shPerm := shInfo.Mode().Perm()
-		if shPerm&0o100 == 0 {
-			t.Errorf("shell script permission %o missing owner execute bit", shPerm)
+		// Check shell script has executable permission (Unix only)
+		if runtime.GOOS != "windows" {
+			shInfo, err := os.Stat(filepath.Join(root, "hooks", "run.sh"))
+			if err != nil {
+				t.Fatalf("Stat shell script: %v", err)
+			}
+			shPerm := shInfo.Mode().Perm()
+			if shPerm&0o100 == 0 {
+				t.Errorf("shell script permission %o missing owner execute bit", shPerm)
+			}
 		}
 
 		// Check non-shell file has standard permissions
@@ -513,13 +516,15 @@ func TestModeAwareDeployer_Deploy(t *testing.T) {
 			t.Errorf("content = %q, want rendered shell script", string(data))
 		}
 
-		// Shell scripts should have executable permission
-		info, err := os.Stat(absPath)
-		if err != nil {
-			t.Fatalf("Stat error: %v", err)
-		}
-		if info.Mode().Perm()&0o100 == 0 {
-			t.Errorf("rendered .sh file should have executable permission, got %o", info.Mode().Perm())
+		// Shell scripts should have executable permission (Unix only)
+		if runtime.GOOS != "windows" {
+			info, err := os.Stat(absPath)
+			if err != nil {
+				t.Fatalf("Stat error: %v", err)
+			}
+			if info.Mode().Perm()&0o100 == 0 {
+				t.Errorf("rendered .sh file should have executable permission, got %o", info.Mode().Perm())
+			}
 		}
 	})
 }

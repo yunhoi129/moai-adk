@@ -2246,8 +2246,10 @@ func TestFindProjectRoot_FromNestedDir(t *testing.T) {
 		t.Fatalf("findProjectRoot error: %v", err)
 	}
 	// Resolve symlinks for comparison (macOS: /var -> /private/var)
+	// Also normalize both paths to handle Windows 8.3 short paths
 	wantDir, _ := filepath.EvalSymlinks(tmpDir)
-	if root != wantDir {
+	rootNorm, _ := filepath.EvalSymlinks(root)
+	if rootNorm != wantDir {
 		t.Errorf("findProjectRoot = %q, want %q", root, wantDir)
 	}
 }
