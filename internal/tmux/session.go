@@ -8,6 +8,11 @@ import (
 
 const defaultMaxVisible = 3
 
+// SessionPrefix is the naming prefix for all MoAI-managed tmux sessions.
+// Only sessions whose name starts with this prefix are considered for
+// automated cleanup (e.g., orphaned session removal on SessionEnd).
+const SessionPrefix = "moai-"
+
 // PaneConfig describes a single tmux pane.
 type PaneConfig struct {
 	// SpecID identifies the SPEC this pane is for (e.g., "SPEC-ISSUE-123").

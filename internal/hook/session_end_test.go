@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/modu-ai/moai-adk/internal/tmux"
 )
 
 func TestSessionEndHandler_EventType(t *testing.T) {
@@ -246,6 +248,17 @@ func TestCleanupOrphanedTmuxSessions_GracefulWithContext(t *testing.T) {
 
 	// Should not panic or hang.
 	cleanupOrphanedTmuxSessions(ctx)
+}
+
+func TestSessionPrefix_Value(t *testing.T) {
+	t.Parallel()
+
+	// Ensure the prefix used for filtering orphaned tmux sessions is "moai-".
+	// Changing this constant would affect which sessions get cleaned up on
+	// SessionEnd, so guard against accidental modifications.
+	if tmux.SessionPrefix != "moai-" {
+		t.Errorf("SessionPrefix = %q, want %q", tmux.SessionPrefix, "moai-")
+	}
 }
 
 func TestSessionEndHandler_AlwaysReturnsEmptyOutput(t *testing.T) {

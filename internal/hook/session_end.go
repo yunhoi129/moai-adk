@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/modu-ai/moai-adk/internal/tmux"
 )
 
 // teamConfig is the minimal structure read from ~/.claude/teams/*/config.json.
@@ -173,10 +175,12 @@ func garbageCollectStaleTeams(homeDir string) {
 	}
 }
 
-// cleanupOrphanedTmuxSessions kills tmux sessions that are not currently
-// attached. The cleanup is capped at 4 seconds to stay within the SessionEnd
-// hook timeout budget. If tmux is not installed or no sessions exist, the
-// function returns silently.
+// cleanupOrphanedTmuxSessions kills MoAI-managed tmux sessions that are not
+// currently attached. Only sessions whose name starts with the MoAI prefix
+// ("moai-") are considered; user-created sessions are never touched.
+// The cleanup is capped at 4 seconds to stay within the SessionEnd hook
+// timeout budget. If tmux is not installed or no sessions exist, the function
+// returns silently.
 func cleanupOrphanedTmuxSessions(ctx context.Context) {
 	// Reserve 4 seconds for tmux cleanup, leaving 1 second buffer.
 	cleanupCtx, cancel := context.WithTimeout(ctx, 4*time.Second)
@@ -203,6 +207,12 @@ func cleanupOrphanedTmuxSessions(ctx context.Context) {
 		// Session name is the part before the first colon.
 		name, _, found := strings.Cut(line, ":")
 		if !found || name == "" {
+			continue
+		}
+
+		// Only kill sessions created by MoAI (prefixed with "moai-").
+		// User-created sessions must never be terminated.
+		if !strings.HasPrefix(name, tmux.SessionPrefix) {
 			continue
 		}
 
