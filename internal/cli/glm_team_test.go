@@ -228,6 +228,7 @@ func TestDisableTeamMode(t *testing.T) {
 // TestEnableTeamModeAlwaysGLM verifies enableTeamMode(false) sets team_mode to "glm".
 func TestEnableTeamModeAlwaysGLM(t *testing.T) {
 	t.Setenv("MOAI_TEST_MODE", "1")
+	t.Setenv("GLM_API_KEY", "test-api-key")
 
 	// Create project dir
 	projectRoot := t.TempDir()

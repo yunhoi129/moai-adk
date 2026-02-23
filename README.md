@@ -620,6 +620,91 @@ MoAI-ADK partners with **z.ai GLM 5** to provide a cost-effective AI development
 
 **[Sign up for GLM 5 (extra 10% discount)](https://z.ai/subscribe?ic=1NDV03BGWU)** -- Referral rewards are used to fund MoAI open-source development.
 
+### CG Mode (Claude + GLM Hybrid)
+
+CG Mode is a hybrid mode where the Leader uses **Claude API** while Workers use **GLM API**. It's implemented via tmux session-level environment variable isolation.
+
+#### How It Works
+
+```
+moai cg execution
+    │
+    ├── 1. Inject GLM config into tmux session env
+    │      (ANTHROPIC_AUTH_TOKEN, BASE_URL, MODEL_* vars)
+    │
+    ├── 2. Remove GLM env from settings.local.json
+    │      → Leader pane uses Claude API
+    │
+    └── 3. Set CLAUDE_CODE_TEAMMATE_DISPLAY=tmux
+           → Workers inherit GLM env in new panes
+
+┌─────────────────────────────────────────────────────────────┐
+│  LEADER (current tmux pane, Claude API)                     │
+│  - Orchestrates workflow when /moai --team runs             │
+│  - Handles plan, quality, sync phases                       │
+│  - No GLM env → uses Claude API                             │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ Agent Teams (new tmux panes)
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│  TEAMMATES (new tmux panes, GLM API)                        │
+│  - Inherit tmux session env → use GLM API                   │
+│  - Execute implementation tasks in run phase                │
+│  - Communicate with leader via SendMessage                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Usage
+
+```bash
+# 1. Save GLM API key (once)
+moai glm sk-your-glm-api-key
+
+# 2. Verify tmux environment (skip if already in tmux)
+# If you need a new tmux session:
+tmux new -s moai
+
+# TIP: Set VS Code terminal default to tmux for automatic tmux environment.
+# This allows you to skip this step entirely.
+
+# 3. Enable CG mode
+moai cg
+
+# 4. Start Claude Code in the SAME pane (critical!)
+claude
+
+# 5. Run team workflow
+/moai --team "your task description"
+```
+
+#### Important Notes
+
+| Item | Description |
+|------|-------------|
+| **tmux Environment** | If already using tmux, no need to create a new session. Set VS Code terminal default to tmux for convenience. |
+| **Leader Start Location** | MUST start Claude Code in the **same pane** where `moai cg` was run. Starting in a new pane will inherit GLM env. |
+| **Session End** | session_end hook automatically clears tmux session env → next session uses Claude |
+| **Agent Teams Communication** | SendMessage tool enables Leader↔Workers communication |
+
+#### Mode Comparison
+
+| Command | Leader | Workers | tmux Required | Cost Savings | Use Case |
+|---------|--------|---------|---------------|--------------|----------|
+| `moai cc` | Claude | Claude | No | - | Complex work, maximum quality |
+| `moai glm` | GLM | GLM | Recommended | ~70% | Cost optimization |
+| `moai cg` | Claude | GLM | **Required** | **~60%** | Quality + cost balance |
+
+#### Display Modes
+
+Agent Teams supports two display modes:
+
+| Mode | Description | Communication | Leader/Worker Separation |
+|------|-------------|---------------|--------------------------|
+| `in-process` | Default mode, all terminals | ✅ SendMessage | ❌ Same env |
+| `tmux` | Split-pane display | ✅ SendMessage | ✅ Session env isolation |
+
+**CG Mode only supports Leader/Worker API separation in `tmux` display mode.**
+
 ---
 
 ## @MX Tag System

@@ -33,7 +33,7 @@ func (h *sessionEndHandler) EventType() EventType {
 
 // Handle processes a SessionEnd event. It logs the session completion,
 // performs best-effort team directory cleanup, garbage-collects stale teams,
-// and kills orphaned tmux sessions.
+// clears tmux session env vars, and kills orphaned tmux sessions.
 // SessionEnd hooks should not use hookSpecificOutput per Claude Code protocol.
 // All cleanup is best-effort: errors are logged with slog.Warn, never returned.
 func (h *sessionEndHandler) Handle(ctx context.Context, input *HookInput) (*HookOutput, error) {
@@ -53,6 +53,13 @@ func (h *sessionEndHandler) Handle(ctx context.Context, input *HookInput) (*Hook
 	cleanupCurrentSessionTeam(input.SessionID, homeDir)
 	garbageCollectStaleTeams(homeDir)
 	cleanupOrphanedTmuxSessions(ctx)
+
+	// Always clear tmux session-level GLM env vars to restore Claude models.
+	// This is safe to call unconditionally:
+	//   - If not in tmux: early return (checks TMUX env var)
+	//   - If env vars don't exist: tmux command is a no-op
+	// This ensures the lead session returns to Claude after team completion.
+	clearTmuxSessionEnv()
 
 	// SessionEnd hooks return empty JSON {} per Claude Code protocol
 	// Do NOT use hookSpecificOutput for SessionEnd events
@@ -209,6 +216,39 @@ func cleanupOrphanedTmuxSessions(ctx context.Context) {
 			slog.Info("session_end: killed orphaned tmux session",
 				"session", name,
 			)
+		}
+	}
+}
+
+// clearTmuxSessionEnv removes GLM environment variables from tmux session.
+// Called when team mode completes to restore Claude models for the lead session.
+// This ensures that after --team mode, the leader returns to using Claude models
+// instead of continuing to use GLM from the tmux session-level env vars.
+func clearTmuxSessionEnv() {
+	// Skip if not in tmux
+	if os.Getenv("TMUX") == "" {
+		return
+	}
+
+	// GLM environment variables to clear
+	envVars := []string{
+		"ANTHROPIC_AUTH_TOKEN",
+		"ANTHROPIC_BASE_URL",
+		"ANTHROPIC_DEFAULT_OPUS_MODEL",
+		"ANTHROPIC_DEFAULT_SONNET_MODEL",
+		"ANTHROPIC_DEFAULT_HAIKU_MODEL",
+	}
+
+	for _, name := range envVars {
+		cmd := exec.Command("tmux", "set-environment", "-u", name)
+		if err := cmd.Run(); err != nil {
+			// Log warning but don't fail - variable might not exist
+			slog.Warn("session_end: failed to clear tmux env",
+				"env", name,
+				"error", err,
+			)
+		} else {
+			slog.Info("session_end: cleared tmux env", "env", name)
 		}
 	}
 }

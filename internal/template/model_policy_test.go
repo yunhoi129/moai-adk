@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"testing/fstest"
 
@@ -407,6 +408,10 @@ func TestDeployWithTemplateRendering(t *testing.T) {
 }
 
 func TestDeployShellScriptPermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file permissions not supported on Windows")
+	}
+
 	fsys := fstest.MapFS{
 		"scripts/run.sh": &fstest.MapFile{
 			Data: []byte("#!/bin/bash\necho hello"),

@@ -558,6 +558,93 @@ MoAI-ADK 在开发会话期间自动捕获任务工具指标：
 
 ---
 
+## CG 模式（Claude + GLM 混合）
+
+CG 模式是一种混合模式，领导者使用 **Claude API**，工作者使用 **GLM API**。通过 tmux 会话级环境变量隔离实现。
+
+### 工作原理
+
+```
+moai cg 执行
+    │
+    ├── 1. 向 tmux 会话环境变量注入 GLM 配置
+    │      (ANTHROPIC_AUTH_TOKEN, BASE_URL, MODEL_* 变量)
+    │
+    ├── 2. 从 settings.local.json 移除 GLM 环境变量
+    │      → 领导者窗格使用 Claude API
+    │
+    └── 3. 设置 CLAUDE_CODE_TEAMMATE_DISPLAY=tmux
+           → 工作者在新窗格中继承 GLM 环境变量
+
+┌─────────────────────────────────────────────────────────────┐
+│  LEADER（当前 tmux 窗格，Claude API）                        │
+│  - 执行 /moai --team 时协调工作流                            │
+│  - 处理 plan、quality、sync 阶段                             │
+│  - 无 GLM 环境变量 → 使用 Claude API                         │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ Agent Teams（新 tmux 窗格）
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│  TEAMMATES（新 tmux 窗格，GLM API）                          │
+│  - 继承 tmux 会话环境变量 → 使用 GLM API                     │
+│  - 执行 run 阶段的实现任务                                   │
+│  - 通过 SendMessage 与领导者通信                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 使用方法
+
+```bash
+# 1. 保存 GLM API 密钥（首次）
+moai glm sk-your-glm-api-key
+
+# 2. 确认 tmux 环境（已在使用 tmux 则跳过）
+# 如果需要新的 tmux 会话:
+tmux new -s moai
+
+# 提示：将 VS Code 终端默认设置为 tmux，
+# 可自动在 tmux 环境中启动，跳过此步骤。
+
+# 3. 启用 CG 模式
+moai cg
+
+# 4. 在同一窗格启动 Claude Code（重要！）
+claude
+
+# 5. 运行团队工作流
+/moai --team "任务描述"
+```
+
+### 注意事项
+
+| 项目 | 说明 |
+|------|------|
+| **tmux 环境** | 如果已在使用 tmux，无需创建新会话。将 VS Code 终端默认设置为 tmux 会更方便。 |
+| **领导者启动位置** | 必须在执行 `moai cg` 的 **同一窗格** 启动 Claude Code。在新窗格启动会继承 GLM 环境变量。 |
+| **会话结束时** | session_end 钩子自动清除 tmux 会话环境变量 → 下个会话恢复使用 Claude |
+| **Agent Teams 通信** | 使用 SendMessage 工具可实现领导者↔工作者间通信 |
+
+### 模式对比
+
+| 命令 | 领导者 | 工作者 | 需要 tmux | 成本节省 | 使用场景 |
+|------|--------|--------|-----------|----------|----------|
+| `moai cc` | Claude | Claude | 否 | - | 复杂工作、最高质量 |
+| `moai glm` | GLM | GLM | 推荐 | ~70% | 成本优化 |
+| `moai cg` | Claude | GLM | **必需** | **~60%** | 质量与成本平衡 |
+
+### 显示模式
+
+Agent Teams 支持两种显示模式:
+
+| 模式 | 说明 | 通信 | 领导者/工作者分离 |
+|------|------|------|------------------|
+| `in-process` | 默认模式，所有终端 | ✅ SendMessage | ❌ 相同环境变量 |
+| `tmux` | 分割窗格显示 | ✅ SendMessage | ✅ 会话环境变量隔离 |
+
+**CG 模式仅在 `tmux` 显示模式下支持领导者/工作者 API 分离。**
+
+---
+
 ## 架构
 
 ```

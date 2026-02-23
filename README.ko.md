@@ -620,6 +620,91 @@ MoAI-ADK는 **z.ai GLM 5**과 파트너십을 통해 경제적인 AI 개발 환�
 
 **[GLM 5 가입하기 (10% 추가 할인)](https://z.ai/subscribe?ic=1NDV03BGWU)** — 가입 리워드는 MoAI 오픈소스 개발에 사용됩니다.
 
+### CG 모드 (Claude + GLM 하이브리드)
+
+CG 모드는 Leader는 **Claude API**, Workers는 **GLM API**를 사용하는 하이브리드 모드입니다. tmux session-level 환경변수를 활용한 pane 격리로 구현됩니다.
+
+#### 작동 원리
+
+```
+moai cg 실행
+    │
+    ├── 1. tmux session env에 GLM 설정 주입
+    │      (ANTHROPIC_AUTH_TOKEN, BASE_URL, MODEL_* 변수)
+    │
+    ├── 2. settings.local.json에서 GLM env 제거
+    │      → Leader pane은 Claude API 사용
+    │
+    └── 3. CLAUDE_CODE_TEAMMATE_DISPLAY=tmux 설정
+           → Workers는 새 pane에서 GLM env 상속
+
+┌─────────────────────────────────────────────────────────────┐
+│  LEADER (현재 tmux pane, Claude API)                        │
+│  - /moai --team 실행 시 워크플로우 조율                       │
+│  - plan, quality, sync 단계 수행                             │
+│  - GLM env 없음 → Claude API 사용                            │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ Agent Teams (새 tmux panes)
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│  TEAMMATES (새 tmux panes, GLM API)                         │
+│  - tmux session env 상속 → GLM API 사용                      │
+│  - run 단계의 구현 작업 수행                                  │
+│  - SendMessage으로 리더와 통신                               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 사용 방법
+
+```bash
+# 1. GLM API 키 저장 (최초 1회)
+moai glm sk-your-glm-api-key
+
+# 2. tmux 세션 확인 (이미 tmux 사용 중이면 생략)
+# 새 tmux 세션이 필요한 경우:
+tmux new -s moai
+
+# VS Code 터미널 설정에서 "기본 실행 터미널"을 tmux로 설정하면
+# 자동으로 tmux 환경에서 시작되어 이 단계를 생략할 수 있습니다.
+
+# 3. CG 모드 활성화
+moai cg
+
+# 4. 같은 pane에서 Claude Code 시작 (중요!)
+claude
+
+# 5. Team 작업 실행
+/moai --team "작업 설명"
+```
+
+#### 주의사항
+
+| 항목 | 설명 |
+|------|------|
+| **tmux 환경** | 이미 tmux를 사용 중인 터미널에서는 새 세션 생성 불필요. VS Code 터미널 기본값을 tmux로 설정하면 편리. |
+| **Leader 시작 위치** | 반드시 `moai cg`를 실행한 **같은 pane**에서 Claude Code 시작. 새 pane에서 시작하면 GLM env를 상속받음. |
+| **세션 종료 시** | session_end hook이 tmux session env를 자동 제거 → 다음 세션에서 Claude로 복귀 |
+| **Agent Teams 통신** | SendMessage 도구로 Leader↔Workers 통신 가능 |
+
+#### 모드 비교
+
+| 명령어 | Leader | Workers | tmux 필요 | 비용 절감 | 사용 시나리오 |
+|--------|--------|---------|-----------|-----------|---------------|
+| `moai cc` | Claude | Claude | 아니오 | - | 복잡한 작업, 최고 품질 |
+| `moai glm` | GLM | GLM | 권장 | ~70% | 비용 최적화 |
+| `moai cg` | Claude | GLM | **필수** | **~60%** | 품질 + 비용 균형 |
+
+#### Display 모드
+
+Agent Teams는 두 가지 display 모드를 지원합니다:
+
+| 모드 | 설명 | 통신 | Leader/Worker 분리 |
+|------|------|------|-------------------|
+| `in-process` | 기본 모드, 모든 터미널 | ✅ SendMessage | ❌ 동일 env |
+| `tmux` | split-pane 표시 | ✅ SendMessage | ✅ session env 분리 |
+
+**CG 모드는 `tmux` display 모드에서만 Leader/Worker API 분리가 가능합니다.**
+
 ---
 
 ## @MX 태그 시스템
