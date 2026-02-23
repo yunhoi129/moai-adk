@@ -109,14 +109,7 @@ func enableTeamMode(cmd *cobra.Command, isHybrid bool) error {
 	// panes that inherit tmux session-level GLM env vars.
 	// MOAI_TEST_MODE bypasses the tmux requirement for unit tests.
 	if isHybrid && !inTmux && os.Getenv("MOAI_TEST_MODE") != "1" {
-		return fmt.Errorf("CG mode requires a tmux session\n\n"+
-			"tmux is required for Claude + GLM hybrid mode because:\n"+
-			"  - Leader (this pane): No GLM env → uses Claude API\n"+
-			"  - Teammates (new panes): Inherit GLM env → use Z.AI API\n\n"+
-			"Start a tmux session first:\n"+
-			"  tmux new -s moai\n"+
-			"  moai cg\n\n"+
-			"Or use 'moai glm' for all-GLM mode (no tmux required).")
+		return fmt.Errorf("CG mode requires a tmux session: tmux is required for Claude + GLM hybrid mode because: Leader (this pane) uses Claude API, Teammates (new panes) inherit GLM env to use Z.AI API. Start a tmux session first: tmux new -s moai; moai cg. Or use 'moai glm' for all-GLM mode (no tmux required)")
 	}
 
 	// Inject GLM environment variables into tmux session (if available)
@@ -126,9 +119,7 @@ func enableTeamMode(cmd *cobra.Command, isHybrid bool) error {
 		if err := injectTmuxSessionEnv(glmConfig, apiKey); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to inject tmux session env: %v\n", err)
 			if isHybrid {
-				return fmt.Errorf("failed to inject GLM env into tmux session: %w\n\n"+
-					"CG mode relies on tmux session env for teammate isolation.\n"+
-					"Try restarting your tmux session.", err)
+				return fmt.Errorf("failed to inject GLM env into tmux session: %w (CG mode relies on tmux session env for teammate isolation, try restarting your tmux session)", err)
 			}
 			// For GLM mode, continue anyway - settings.local.json is the primary method
 		}

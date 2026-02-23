@@ -385,27 +385,6 @@ func TestResolveGLMModels(t *testing.T) {
 	}
 }
 
-// TestLoadGLMConfig_BackwardCompatibility reproduces Issue #409:
-// Legacy users with llm.yaml configured using old field names (opus, sonnet, haiku)
-// should get correct model mapping via resolveGLMModels fallback.
-// NOTE: This test is now covered by glm_compat_test.go tests.
-func TestLoadGLMConfig_BackwardCompatibility(t *testing.T) {
-	t.Skip("Covered by glm_compat_test.go tests - kept for historical reference")
-}
-
-// configManagerMock is a minimal mock of config.ConfigManager for testing.
-type configManagerMock struct {
-	cfg *config.Config
-}
-
-func (m *configManagerMock) Get() *config.Config {
-	return m.cfg
-}
-
-func (m *configManagerMock) Reload() error {
-	return nil
-}
-
 func TestSaveGLMKey_OverwriteExisting(t *testing.T) {
 	// Create temp home directory
 	tmpHome := t.TempDir()
