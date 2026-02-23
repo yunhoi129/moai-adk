@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.1] - 2026-02-23
+
+### Summary
+
+Bug fix release preventing SessionEnd hook from accidentally terminating the user's tmux session when cleaning up orphaned teammate sessions.
+
+### Breaking Changes
+
+None.
+
+### Fixed
+
+- **SessionEnd tmux cleanup**: SessionEnd hook now correctly identifies and protects the user's actual tmux session from being killed during orphaned session cleanup. Added `getCurrentTmuxSession()` helper function that uses `tmux display-message -p '#S'` to get the current session name. The cleanup logic now explicitly skips the current session before checking for "(attached)" status, preventing accidental termination of the user's tmux session when Claude Code session ends.
+
+### Installation & Update
+
+```bash
+# Update to the latest version
+moai update
+
+# Verify version
+moai version
+```
+
+---
+
+## [2.5.1] - 2026-02-23 (한국어)
+
+### 요약
+
+SessionEnd 훅이 orphaned teammate 세션을 정리할 때 사용자의 tmux 세션을 실수로 종료하는 문제를 수정하는 버그 수정 릴리즈입니다.
+
+### 주요 변경 사항 (Breaking Changes)
+
+없음.
+
+### 수정됨 (Fixed)
+
+- **SessionEnd tmux 정리**: SessionEnd 훅이 이제 orphaned 세션 정리 중 사용자의 실제 tmux 세션을 올바르게 보호합니다. `getCurrentTmuxSession()` 헬퍼 함수를 추가하여 `tmux display-message -p '#S'`로 현재 세션 이름을 가져옵니다. 정리 로직이 "(attached)" 상태를 확인하기 전에 현재 세션을 명시적으로 건너뛰도록 수정되어, Claude Code 세션 종료 시 사용자의 tmux 세션이 실수로 종료되는 문제를 방지합니다.
+
+### 설치 및 업데이트 (Installation & Update)
+
+```bash
+# 최신 버전으로 업데이트
+moai update
+
+# 버전 확인
+moai version
+```
+
+---
+
 ## [2.5.0] - 2026-02-23
 
 ### Summary
