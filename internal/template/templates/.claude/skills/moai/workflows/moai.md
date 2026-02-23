@@ -6,10 +6,10 @@ description: >
   implementation with optional auto-fix loop, and documentation sync.
 user-invocable: false
 metadata:
-  version: "2.5.0"
+  version: "2.6.0"
   category: "workflow"
   status: "active"
-  updated: "2026-02-22"
+  updated: "2026-02-23"
   tags: "moai, autonomous, pipeline, plan-run-sync, default"
 
 # MoAI Extension: Progressive Disclosure
@@ -82,14 +82,19 @@ For methodology details, see: @.claude/rules/moai/workflow/workflow-modes.md
 
 Launch three agents simultaneously in a single response for 2-3x speedup (15-30s vs 45-90s).
 
-Agent 1 - Explore (subagent_type Explore):
+Agent 1 - Explore (subagent_type Explore, produces research.md):
 - If .moai/project/codemaps/ exists: Use as architecture baseline to accelerate exploration (skip redundant scanning)
-- Codebase analysis for task context
-- Relevant files, architecture patterns, existing implementations
+- Read target code areas IN DEPTH — understand deeply how each module works, its intricacies and side effects
+- Study cross-module interactions IN GREAT DETAIL — trace data flow, identify implicit contracts
+- Search for REFERENCE IMPLEMENTATIONS — find similar patterns in the codebase that can guide the new feature
+- Document findings with specific file paths and line references
+- Output: research.md artifact with architecture analysis, reference implementations, risks, and constraints
 
 Agent 2 - Research (subagent_type Explore with WebSearch/WebFetch focus):
 - External documentation and best practices
 - API docs, library documentation, similar implementations
+- Reference implementations from open-source projects that align with project conventions
+- Documented design patterns relevant to the feature being implemented
 
 Agent 3 - Quality (subagent_type manager-quality):
 - Current project quality assessment
@@ -97,8 +102,9 @@ Agent 3 - Quality (subagent_type manager-quality):
 
 After all agents complete:
 - Collect outputs from each agent response
-- Extract key findings from Explore (files, patterns), Research (external knowledge), Quality (coverage baseline)
-- Synthesize into unified exploration report
+- Extract key findings from Explore (research.md with files, patterns, reference implementations), Research (external knowledge, documented patterns), Quality (coverage baseline)
+- Synthesize into unified exploration report including research.md artifact
+- Save research.md to .moai/specs/SPEC-{ID}/research.md when SPEC ID is determined
 - Generate execution plan with files to create/modify and test strategy
 
 Error handling: If any agent fails, continue with results from successful agents. Note missing information in plan.
@@ -119,6 +125,17 @@ User approval checkpoint via AskUserQuestion:
 - Delegate to manager-spec subagent
 - Output: EARS-format SPEC document at .moai/specs/SPEC-XXX/spec.md
 - Includes requirements, acceptance criteria, technical approach
+
+## Phase 1.5: Plan Annotation Cycle (1-6 iterations)
+
+After SPEC generation and before implementation:
+1. Present SPEC document and research.md to user for review
+2. User adds inline annotations/corrections to plan
+3. MoAI delegates to manager-spec: "Address all inline notes. DO NOT implement any code."
+4. Repeat until user approves (maximum 6 iterations)
+5. Track iteration count: "Annotation cycle {N}/6"
+
+This iterative refinement catches architectural misunderstandings before implementation begins.
 
 ## Phase 2: Implementation (TDD or DDD based on development_mode)
 
@@ -186,12 +203,14 @@ Mode selection:
 6. Routing decision (single-domain direct delegation vs full workflow)
 7. TaskCreate for discovered tasks
 8. User confirmation via AskUserQuestion
-9. **Phase 1 (Plan)**: If team mode -> Read team/plan.md and follow team orchestration. Else -> manager-spec sub-agent
-10. **Phase 2 (Run)**: If team mode -> Read team/run.md and follow team orchestration. Else -> manager-tdd or manager-ddd sub-agent (per quality.yaml development_mode)
-11. **Phase 3 (Sync)**: Always manager-docs sub-agent (sync phase never uses team mode)
-12. Terminate with completion marker
+9. **Phase 0.5 (Research)**: Save research.md from Phase 0 Explore findings to SPEC directory
+10. **Phase 1 (Plan)**: If team mode -> Read team/plan.md and follow team orchestration. Else -> manager-spec sub-agent
+11. **Phase 1.5 (Annotate)**: Run annotation cycle (1-6 iterations) until user approves plan
+12. **Phase 2 (Run)**: If team mode -> Read team/run.md and follow team orchestration. Else -> manager-tdd or manager-ddd sub-agent (per quality.yaml development_mode)
+13. **Phase 3 (Sync)**: Always manager-docs sub-agent (sync phase never uses team mode)
+14. Terminate with completion marker
 
 ---
 
-Version: 2.5.0
-Source: Renamed from alfred.md. Unified plan->run->sync pipeline. Added SPEC/project document update in sync phase.
+Version: 2.6.0
+Source: SPEC-MOAI-001. Integrated research pattern with deep codebase analysis, reference implementations, and annotation cycle for plan refinement.

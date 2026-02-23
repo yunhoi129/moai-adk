@@ -6,10 +6,10 @@ description: >
   on quality.yaml development_mode setting.
 user-invocable: false
 metadata:
-  version: "2.5.0"
+  version: "2.6.0"
   category: "workflow"
   status: "active"
-  updated: "2026-02-22"
+  updated: "2026-02-23"
   tags: "run, implementation, ddd, tdd, spec"
 
 # MoAI Extension: Progressive Disclosure
@@ -70,7 +70,7 @@ All phases execute sequentially. Each phase receives outputs from all previous p
 
 Agent: manager-strategy subagent
 
-Input: SPEC document content from the provided SPEC-ID.
+Input: SPEC document content from the provided SPEC-ID. If research.md exists in the SPEC directory (.moai/specs/SPEC-{ID}/research.md), include it as additional context for deeper understanding of the codebase architecture, reference implementations, and identified risks.
 
 Tasks for manager-strategy:
 
@@ -83,6 +83,8 @@ Tasks for manager-strategy:
 
 Output: Execution plan containing plan_summary, requirements list, success_criteria, and effort_estimate.
 
+Implementation guard: [HARD] During Phase 1 (Analysis and Planning), the manager-strategy subagent MUST NOT write any implementation code. The explicit instruction "DO NOT implement any code — focus exclusively on analysis and planning" MUST be included in the agent prompt. This separation of thinking and execution prevents premature implementation and ensures the plan is reviewed before any code is written.
+
 ### Decision Point 1: Plan Approval
 
 Tool: AskUserQuestion (at orchestrator level)
@@ -91,6 +93,7 @@ Before presenting options, verify the plan against these criteria:
 
 - Proportionality: Is the plan proportional to the requirements? Flag plans with excessive abstraction layers, unnecessary patterns, or scope creep beyond SPEC requirements.
 - Code Reuse: Has the plan identified existing code, libraries, or patterns that can be reused? Flag plans that reinvent existing functionality.
+- Reference Implementations: Has the plan leveraged reference implementations from research.md? Flag plans that ignore available reference code in the codebase.
 - Simplicity: Does the plan follow YAGNI (You Aren't Gonna Need It)? Flag speculative features not in the SPEC.
 
 Options:
@@ -365,5 +368,5 @@ All of the following must be verified:
 
 ---
 
-Version: 2.5.0
-Updated: 2026-02-22
+Version: 2.6.0
+Updated: 2026-02-23

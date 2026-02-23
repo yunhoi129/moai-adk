@@ -7,10 +7,10 @@ description: >
   or branch creation. Use when planning features or creating specifications.
 user-invocable: false
 metadata:
-  version: "2.5.0"
+  version: "2.6.0"
   category: "workflow"
   status: "active"
-  updated: "2026-02-22"
+  updated: "2026-02-23"
   tags: "plan, spec, ears, requirements, specification, design"
 
 # MoAI Extension: Progressive Disclosure
@@ -94,7 +94,44 @@ Tasks for the Explore subagent:
 - Locate existing SPEC documents in .moai/specs/
 - Identify implementation patterns and dependencies
 - Discover project configuration files
+- Read target directories in depth — understand deeply how each module works, its intricacies and side effects
+- Study cross-module interactions in great detail — trace data flow through the system
+- Go through related test files to understand expected behavior and edge cases
 - Report comprehensive results for Phase 1B context
+
+### Phase 0.5: Deep Research (Recommended)
+
+Agent: Explore subagent (deep codebase analysis)
+
+Purpose: Produce a persistent research.md artifact documenting deep codebase understanding. This document serves as a verification surface — MoAI and the user can review it and correct misunderstandings before planning begins.
+
+When to run:
+- Feature involves modifying existing code
+- Feature has cross-module dependencies
+- User explicitly requests research phase
+
+When to skip:
+- Simple, isolated additions (new file with no dependencies)
+- User provides explicit "skip research" instruction
+
+Tasks for the Explore subagent:
+- Read target code areas in depth — understand how they work deeply, their intricacies and specificities
+- Study related systems in great detail — trace data flow, identify implicit contracts and side effects
+- Discover reference implementations in the existing codebase — find similar patterns that can guide the new implementation
+- Search for relevant open-source examples or documented patterns that align with the project's conventions
+- Document all findings in a structured research.md file
+
+Research directives (Deep Reading patterns):
+- Use language that demands thoroughness: "read deeply", "study in great detail", "understand the intricacies"
+- Avoid surface-level scanning — agent must trace through actual execution paths
+- Every finding must include specific file paths and line references
+
+Output: `.moai/specs/SPEC-{ID}/research.md` containing:
+- Architecture analysis with file paths and dependency maps
+- Existing patterns and conventions discovered
+- Reference implementations found (internal codebase or documented patterns)
+- Risks, constraints, and implicit contracts identified
+- Recommendations for the implementation approach
 
 ### Phase 1B: SPEC Planning (Required)
 
@@ -109,23 +146,46 @@ Tasks for manager-spec:
 - Design EARS structure for each candidate
 - Create implementation plan with technical constraints
 - Identify library versions (production stable only, no beta/alpha)
+- Search for reference implementations: Identify similar patterns in the existing codebase or well-documented approaches that can guide implementation
+- When reference implementations are found, include them in the plan as "Reference: {file_path}:{line_range}" to improve implementation quality
 
 Output: Implementation plan with SPEC candidates, EARS structure, and technical constraints.
 
-### Decision Point 1: SPEC Creation Approval
+Implementation guard: [HARD] During Phases 0.5, 1A, and 1B, all agent prompts MUST include the instruction: "DO NOT write implementation code. Focus exclusively on research, analysis, and planning." This separation of thinking and typing is the foundation of effective AI-assisted development.
+
+### Decision Point 1: Plan Review and Annotation Cycle
 
 Tool: AskUserQuestion (at orchestrator level only)
 
 Options:
-- Proceed with SPEC Creation
-- Request Plan Modification
-- Save as Draft
-- Cancel
+- Proceed with SPEC Creation (Recommended): Plan is approved, continue to Phase 1.5 then Phase 2
+- Annotate Plan: Add inline notes to plan.md for revision (starts annotation cycle)
+- Save as Draft: Save plan.md with status draft, create commit, print resume command, exit
+- Cancel: Discard plan, exit with no files created
 
 If "Proceed": Continue to Phase 1.5 then Phase 2.
-If "Modify": Collect feedback, re-run Phase 1B with feedback context.
+If "Annotate": Enter Annotation Cycle (see below).
 If "Draft": Save plan.md with status draft, create commit, print resume command, exit.
 If "Cancel": Discard plan, exit with no files created.
+
+#### Annotation Cycle (1-6 iterations)
+
+Purpose: Allow users to iteratively refine the plan through inline notes before any code is written. This prevents expensive failures by catching architectural misunderstandings, missed conventions, and scope issues early.
+
+Process:
+1. User reviews plan.md (and research.md if available) in their editor
+2. User adds inline notes directly into the document (e.g., "NOTE: use drizzle:generate for migrations, not raw SQL")
+3. User signals completion via AskUserQuestion
+4. MoAI delegates to manager-spec subagent: "Address all inline notes in the plan document and update it accordingly. DO NOT implement any code."
+5. manager-spec updates plan.md, removing addressed notes and incorporating feedback
+6. MoAI presents updated plan to user for another review cycle
+
+Iteration limits:
+- Maximum 6 annotation cycles per plan
+- After each cycle, present options: Proceed / Annotate Again / Save Draft / Cancel
+- Track iteration count and display: "Annotation cycle {N}/6"
+
+Guard rule: [HARD] During annotation cycles, the explicit instruction "DO NOT implement any code — only update the plan document" MUST be included in every agent prompt. This prevents premature code generation.
 
 ### Phase 1.5: Pre-Creation Validation Gate
 
@@ -267,5 +327,5 @@ All of the following must be verified:
 
 ---
 
-Version: 2.5.0
-Updated: 2026-02-22
+Version: 2.6.0
+Updated: 2026-02-23

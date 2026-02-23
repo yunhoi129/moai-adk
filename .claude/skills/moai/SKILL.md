@@ -99,8 +99,9 @@ If the intent is clearly a development task with no specific routing signal, def
 
 ### plan - SPEC Document Creation
 
-Purpose: Create comprehensive specification documents using EARS format.
-Agents: manager-spec (primary), Explore (optional), manager-git (conditional)
+Purpose: Create comprehensive specification documents using EARS format with Research-Plan-Annotate cycle.
+Phases: Deep Research (research.md) -> SPEC Planning -> Annotation Cycle (1-6 iterations) -> SPEC Creation
+Agents: manager-spec (primary), Explore (research), manager-git (conditional)
 Flags: --worktree, --branch, --resume SPEC-XXX, --team
 For detailed orchestration: Read workflows/plan.md
 
@@ -176,7 +177,8 @@ For detailed orchestration: Read workflows/e2e.md
 
 ### (default) - MoAI Autonomous Workflow
 
-Purpose: Full autonomous plan -> run -> sync pipeline.
+Purpose: Full autonomous research -> plan -> annotate -> run -> sync pipeline.
+Phases: Parallel Exploration (research.md) -> SPEC Generation -> Annotation Cycle -> Implementation -> Sync
 Agents: Explore, manager-spec, manager-ddd/tdd, manager-quality, manager-docs, manager-git
 Flags: --loop, --max N, --branch, --pr, --resume SPEC-XXX, --team, --solo
 For detailed orchestration: Read workflows/moai.md

@@ -18,6 +18,11 @@ MoAI's three-phase development workflow with token budget management.
 
 Create comprehensive specification using EARS format.
 
+Sub-phases:
+1. Research: Deep codebase analysis producing research.md artifact
+2. Planning: SPEC document creation with EARS format requirements
+3. Annotation: Iterative plan review cycle (1-6 iterations) before implementation approval
+
 Token Strategy:
 - Allocation: 30,000 tokens
 - Load requirements only
@@ -25,6 +30,7 @@ Token Strategy:
 - Saves 45-50K tokens for implementation
 
 Output:
+- Research document at `.moai/specs/SPEC-XXX/research.md` (deep codebase analysis)
 - SPEC document at `.moai/specs/SPEC-XXX/spec.md`
 - EARS format requirements
 - Acceptance criteria
@@ -86,7 +92,7 @@ Progressive Disclosure:
 ## Phase Transitions
 
 Plan to Run:
-- Trigger: SPEC document approved
+- Trigger: SPEC document approved (annotation cycle completed, user confirmed "Proceed")
 - Action: Execute /clear, then /moai run SPEC-XXX
 
 Run to Sync:
@@ -107,7 +113,11 @@ When team mode is enabled (workflow.team.enabled and AGENT_TEAMS env), phases ca
 
 ### Team Mode Plan Phase
 - TeamCreate for parallel research team
-- Teammates explore codebase, analyze requirements, design approach
+- Teammates explore codebase deeply, analyze requirements, design approach
+- researcher teammate produces research.md with deep codebase analysis
+- analyst teammate validates requirements against research findings
+- architect teammate designs solution using reference implementations found in research
+- MoAI runs annotation cycle with user for plan refinement (1-6 iterations)
 - MoAI synthesizes into SPEC document
 - Shutdown team, /clear before Run phase
 
