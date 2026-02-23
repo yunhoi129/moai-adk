@@ -9,13 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.5.0] - 2026-02-20
+## [2.5.0] - 2026-02-23
+
+### Summary
+
+Production-ready release for Agent Teams integration with Claude Code v2.1.30-45, featuring comprehensive quality hooks, persistent memory, CG Mode for cost-effective development, and enhanced workflow methodology including the Research-Plan-Annotate cycle from Boris Tane's development best practices.
 
 ### Added
 
+- **Research-Plan-Annotate Cycle**: Implemented Boris Tane's development workflow with `research.md` artifact generation, 1-6 iteration annotation cycle before implementation, and implementation guards preventing premature code writing during planning phases. Deep reading patterns ("IN DEPTH", "IN GREAT DETAIL") and reference implementation search integrated across plan, moai, and team workflows.
 - **Agent Teams Quality Hooks**: TeammateIdle hook now enforces LSP quality gates when diagnostics baseline exists. TaskCompleted hook verifies SPEC documents exist when task references SPEC-XXX patterns. All validation uses graceful degradation.
 - **Agent Persistent Memory**: All 28 agent templates now have consistent `memory` frontmatter. Manager/Expert/Team agents use `project` scope; Builder agents use `user` scope for cross-project learning.
-- **Settings Enhancements**: `spinnerTipsOverride` with 8 MoAI-specific workflow tips, `enabledPlugins`, and `extraKnownMarketplaces` added to settings.json template (Claude Code v2.1.45).
+- **Settings Enhancements**: `spinnerTipsOverride` with 8 MoAI-specific workflow tips added to settings.json template (Claude Code v2.1.45).
 - **Task Metrics Logging**: PostToolUse hook now captures Task tool metrics (tokens, tool uses, duration) to `.moai/logs/task-metrics.jsonl` for session analytics.
 - **MCP OAuth Support**: Added `.moai/docs/MCP_OAUTH_SETUP.md` guide for configuring OAuth credentials for MCP servers (Slack, GitHub, Sentry).
 - **Troubleshooting Guide**: Added troubleshooting section to CLAUDE.md covering `/debug` command usage, common Agent Teams issues, and PDF pagination tips.
